@@ -23,13 +23,16 @@ WORKDIR /usr
 RUN curl -sL 'https://taskfile.dev/install.sh' | sh
 
 COPY rootfs /
+RUN find /etc/s6-overlay/s6-rc.d -type f -exec sed -i 's/\r$//' {} + \
+	&& sed -i 's/\r$//' /usr/bin/common.sh /usr/bin/check-health
 
 COPY scripts/install-s6 /tmp/install-s6
-RUN rm -f /etc/nginx/conf.d/production.conf.template \
+RUN sed -i 's/\r$//' /tmp/install-s6 \
+	&& rm -f /etc/nginx/conf.d/production.conf.template \
 	&& chmod 644 /etc/logrotate.d/nginx-proxy-manager \
 	&& /tmp/install-s6 "${TARGETPLATFORM}" \
 	&& rm -f /tmp/install-s6 \
-	&& chmod 644 -R /root/.cache
+	&& if [ -d /root/.cache ]; then find /root/.cache -type f -exec chmod 644 {} +; fi
 
 # Copy test CA cert for use in container and add to trusted certs from a self-signed CA
 COPY --from=testca /home/step/certs/root_ca.crt /etc/ssl/certs/NginxProxyManager.crt
